@@ -100,6 +100,50 @@
             border-radius: 5px;
             border: 1px solid #333;
         }
+
+        /* Progress Bar Styles */
+        #progress-container {
+            width: 100%;
+            background-color: #333;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: block;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #84c4d4;
+            border-radius: 5px;
+        }
+        #progress-text {
+            margin-top: 10px;
+            color: #84c4d4;
+        }
+
+        /* DM Counter & Status Table */
+        .counter {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #84c4d4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #292929;
+        }
+        td {
+            background-color: #1e1e1e;
+        }
     </style>
 </head>
 <body>
@@ -118,7 +162,7 @@
         </form>
 
         <h2>Send a DM</h2>
-        <form action="/send_dm" method="POST">
+        <form id="sendForm" action="/send_dm" method="POST">
             <label for="target_username">Recipient's Username</label>
             <input type="text" id="target_username" name="target_username" required>
 
@@ -128,9 +172,139 @@
             <button type="submit">Send DM</button>
         </form>
 
+    
+
         {% if result %}
             <div class="result">{{ result }}</div>
         {% endif %}
+
+
+        <div class="progress-section" style="margin-top: 20px;">
+            <div class="counter">
+                <span id="current-count">0</span> / <span id="total-count">0</span> messages sent
+            </div>
+            
+            <div class="progress-bar">
+                <div id="progress" style="width: 0%"></div>
+            </div>
+
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="status-table-body">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- DM Counter Display -->
+        <div class="counter">
+            <span id="current-dm">0</span> / <span id="total-dms">0</span>
+        </div>
+
+        <!-- Progress Bar Section -->
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="progress-text">Starting...</div>
+
+        <!-- Table for DM Status -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="status-table">
+                <!-- Status updates will appear here -->
+            </tbody>
+        </table>
     </div>
+
+    <!-- JavaScript for Progress and Status Updates -->
+    <script>
+        let statusCheckInterval;
+
+        function updateProgress() {
+            fetch('/get_current_status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update counter
+                    document.getElementById('current-count').textContent = data.current;
+                    document.getElementById('total-count').textContent = data.total;
+                    
+                    // Update progress bar
+                    const percentage = (data.current / data.total) * 100;
+                    document.getElementById('progress').style.width = percentage + '%';
+                    
+                    // Update table
+                    const tableBody = document.getElementById('status-table-body');
+                    tableBody.innerHTML = ''; // Clear existing rows
+                    
+                    data.messages.forEach(msg => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${msg.username}</td>
+                            <td>${msg.status}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+
+                    // Stop checking if we're done
+                    if (data.current >= data.total) {
+                        clearInterval(statusCheckInterval);
+                    }
+                });
+        }
+
+        document.getElementById('sendForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            // Reset status
+            fetch('/reset_status', { method: 'POST' })
+                .then(() => {
+                    // Start progress updates
+                    statusCheckInterval = setInterval(updateProgress, 1000);
+                    
+                    // Submit the form
+                    this.submit();
+                });
+        };
+    </script>
+
+    <!-- Add the new styles -->
+    <style>
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        #progress {
+            height: 100%;
+            background-color: #84c4d4;
+            transition: width 0.5s ease-in-out;
+        }
+
+        .status-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        .status-table th,
+        .status-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
 </body>
 </html>
