@@ -144,7 +144,9 @@ def initialize_driver():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920x1080")
+    chrome_options.add_argument("--headless")  # Enable headless mode
 
+    # Debugging message for clarity
     if "--headless" in chrome_options.arguments:
         print("Headless mode is enabled.")
     else:
@@ -155,6 +157,7 @@ def initialize_driver():
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     return driver
+
 
 def locate_element_with_fallback(driver, xpaths, wait_time=10):
     """Try multiple XPATH selectors until one finds an element."""
