@@ -166,17 +166,17 @@ def get_chrome_path():
     
     return chrome_path
 
-def initialize_driver():
-    """Initialize the Chrome WebDriver with optimal settings."""
+def initialize_driver(headless=True):
+    """Initialize the Chrome WebDriver with configurable headless setting."""
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920x1080")
-    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
-    if "--headless" in chrome_options.arguments:
+    if headless:
+        chrome_options.add_argument("--headless")
         print("Headless mode is enabled.")
     else:
         print("Headless mode is NOT enabled.")
@@ -201,23 +201,28 @@ def locate_element_with_fallback(driver, xpaths, wait_time=10):
     raise Exception("None of the provided XPATHs could locate an element.")
 
 def login_and_save_session(username, password):
-    """Login and save the session cookies to a file."""
-    driver = initialize_driver()
-    driver.get("https://www.instagram.com/accounts/login/")
-    time.sleep(2)
+    """Login and save the session cookies to a file using non-headless mode."""
+    driver = initialize_driver(headless=False)  # Disable headless mode for login
+    try:
+        driver.get("https://www.instagram.com/accounts/login/")
+        time.sleep(2)
 
-    driver.find_element(By.NAME, "username").send_keys(username)
-    driver.find_element(By.NAME, "password").send_keys(password)
-    driver.find_element(By.XPATH, "//button[@type='submit']").click()
-    
-    time.sleep(60)  # Wait for login completion
-    
-    cookies = driver.get_cookies()
-    with open(SESSION_FILE, "wb") as file:
-        pickle.dump(cookies, file)
-    
-    print("Session saved successfully!")
-    driver.quit()
+        driver.find_element(By.NAME, "username").send_keys(username)
+        driver.find_element(By.NAME, "password").send_keys(password)
+        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        
+        time.sleep(60)  # Wait for login completion
+        
+        cookies = driver.get_cookies()
+        with open(SESSION_FILE, "wb") as file:
+            pickle.dump(cookies, file)
+        
+        print("Session saved successfully!")
+    except Exception as e:
+        print(f"Error during login: {e}")
+        raise
+    finally:
+        driver.quit()
 
 def send_dm(target_username, message_text, follow_first=False):
     """Send a DM to the specified username by navigating to their profile."""
@@ -229,7 +234,7 @@ def send_dm(target_username, message_text, follow_first=False):
             print(f"Skipping {target_username} - message already sent.")
             return f"Skipped {target_username} - message already sent."
 
-        driver = initialize_driver()
+        driver = initialize_driver(headless=True)
         print("Driver initialized successfully")
         
         # Initial setup and cookie loading
